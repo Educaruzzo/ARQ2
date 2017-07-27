@@ -4,8 +4,7 @@
 
 #define K 1024
 
-#define NUM_BITS_TAG_C01 14		
-#define NUM_BITS_TAG_C02 14		
+#define NUM_BITS_TAG 14				
 #define NUM_BITS_LINHA 11
 #define NUM_BITS_BYTE 4
 
@@ -16,39 +15,80 @@
 // w = 4, s = 25, tag = 14, linha = 11, byte = 4;
 
 typedef struct linha {
-    char p1[NUM_BITS_BYTE + 1];
-    char p2[NUM_BITS_BYTE + 1];
-    char p3[NUM_BITS_BYTE + 1];
-    char p4[NUM_BITS_BYTE + 1];
+    unsigned int p1;
+    unsigned int p2;
+    unsigned int p3;
+    unsigned int p4;
 } Linha;
 
-typedef struct cache01 {
-    int estado[NUM_BITS_TAG_C01];
-    char tag[NUM_BITS_TAG_C01];
+typedef struct cache {
+    int estado[2*K];
+    int tag[2*K];
     Linha linhacache[2*K];
-} Cache01;
+} Cache;
 
-typedef struct cache02 {
-    int estado[NUM_BITS_TAG_C02];
-    char tag[NUM_BITS_TAG_C02];
-    Linha linhacache[2*K];
-} Cache02;
-
-Cache01 CacheDados;
-Cache02 CacheInstrucoes;
+Cache CacheDados;
+Cache CacheInstrucoes;
 
 void InicializaCaches() {			// Função utilizada pelo main
 	int i;
 	
-	for (i = 0; i<NUM_BITS_TAG_C01; i++) {
+	for (i = 0; i<NUM_BITS_TAG; i++) {
 		CacheDados.estado[i] = INVALIDO;
-	}
-	
-	for (i = 0; i<NUM_BITS_TAG_C02; i++) {
 		CacheInstrucoes.estado[i] = INVALIDO;
 	}
 }
 
-void readDataCache {		// Utiliza o CDB
+void readDataCache(unsigned int address) {		// Utiliza o CDB
+	int line, tag, byte;
+	int buffer;					// Simboliza um buffer genérico
 	
+	line = (address << NUM_BITS_TAG) >> (32 - NUM_BITS_LINHA);
+	
+	if (CacheDados.estado[line] == VALIDO) {
+		tag = address >> (32 - NUM_BITS_TAG);
+		
+		if (CacheDados.tag[line] == tag) {
+			byte = (address << (32 - NUM_BITS_BYTE)) >> (32 - NUM_BITS_BYTE);
+			
+			switch (byte) {
+				case 0:
+					InsereFilaCDB(&FilaCDB, CacheDados.Linha[line].p1);
+					break;
+				case 1:
+					InsereFilaCDB(&FilaCDB, CacheDados.Linha[line].p2);
+					break;
+				case 2:
+					InsereFilaCDB(&FilaCDB, CacheDados.Linha[line].p3);
+					break;
+				case 3:
+					InsereFilaCDB(&FilaCDB, CacheDados.Linha[line].p4);
+					break;
+			}
+		}
+		else {
+			buffer = address;
+			CMB.address = buffer;
+			CMB.controle = OCUPADO;
+			
+			readRAM();
+			writeDataCache_ViaCMB();
+			
+			buffer = CMB.dados;
+			InsereFilaCDB(&FilaCDB, buffer);
+			//INCREMENTA CICLOS GASTOS
+		}
+	}
+	else {
+		buffer = address;
+		CMB.address = buffer;
+		CMB.controle = OCUPADO;
+		
+		readRAM();
+		writeDataCache_ViaCMB();
+		
+		buffer = CMB.dados;
+		InsereFilaCDB(&FilaCDB, buffer);
+		//INCREMENTA CICLOS GASTOS
+	}
 }
