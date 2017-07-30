@@ -94,5 +94,54 @@ void readDataCache(unsigned int address) {		// Utiliza o CDB
 }
 
 void writeDataCache_ViaCMB() {
+	int line, tag, byte;
+	int buffer;					// Simboliza um buffer genérico
 	
+	line = (CMB.address << NUM_BITS_TAG) >> (32 - NUM_BITS_LINHA);
+	tag = CMB.address >> (32 - NUM_BITS_TAG);
+	byte = (CMB.address << (32 - NUM_BITS_BYTE)) >> (32 - NUM_BITS_BYTE);
+	
+	if (CacheDados.estado[line] == VALIDO) {
+		
+		//Faz o Write-Back
+		switch (byte) {
+			case 0:
+				CMB.dados = CacheDados.Linha[line].p1;
+				break;
+			case 1:
+				InsereFilaCDB(&FilaCDB, CacheDados.Linha[line].p2);
+				break;
+			case 2:
+				InsereFilaCDB(&FilaCDB, CacheDados.Linha[line].p3);
+				break;
+			case 3:
+				InsereFilaCDB(&FilaCDB, CacheDados.Linha[line].p4);
+				break;
+		}
+		
+		else {
+			buffer = address;
+			CMB.address = (buffer >> NUM_BITS_BYTE) << NUM_BITS_BYTE;
+			CMB.controle = OCUPADO;
+			
+			readRAM();
+			writeDataCache_ViaCMB();
+			
+			buffer = CMB.dados;
+			InsereFilaCDB(&FilaCDB, buffer);
+			//INCREMENTA CICLOS GASTOS
+		}
+	}
+	else {
+		buffer = address;
+		CMB.address = (buffer >> NUM_BITS_BYTE) << NUM_BITS_BYTE;
+		CMB.controle = OCUPADO;
+		
+		readRAM();
+		writeDataCache_ViaCMB();
+		
+		buffer = CMB.dados;
+		InsereFilaCDB(&FilaCDB, buffer);
+		//INCREMENTA CICLOS GASTOS
+	}
 }
