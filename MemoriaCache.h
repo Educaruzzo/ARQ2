@@ -68,7 +68,7 @@ void readDataCache(unsigned int address) {		// Utiliza o CDB
 		}
 		else {
 			buffer = address;
-			CMB.address = buffer;
+			CMB.address = (buffer >> NUM_BITS_BYTE) << NUM_BITS_BYTE;
 			CMB.controle = OCUPADO;
 			
 			readRAM();
@@ -81,7 +81,7 @@ void readDataCache(unsigned int address) {		// Utiliza o CDB
 	}
 	else {
 		buffer = address;
-		CMB.address = buffer;
+		CMB.address = (buffer >> NUM_BITS_BYTE) << NUM_BITS_BYTE;
 		CMB.controle = OCUPADO;
 		
 		readRAM();
@@ -91,4 +91,8 @@ void readDataCache(unsigned int address) {		// Utiliza o CDB
 		InsereFilaCDB(&FilaCDB, buffer);
 		//INCREMENTA CICLOS GASTOS
 	}
+}
+
+void writeDataCache_ViaCMB() {
+	
 }
